@@ -6,9 +6,12 @@ name = "pypi"
 [packages]
 scikit-learn = "==1.1.2"
 flask = "==2.2.2"
-requests = "*"
+requests = "==2.28.1"
+pandas = "==1.4.3"
+haversine = "==2.6.0"
 
 [dev-packages]
+jupyterlab = "*"
 
 [requires]
 python_version = "3.9"
