@@ -1,6 +1,5 @@
 import os
 import mlflow
-import pandas as pd
 from flask import Flask, request, jsonify
 
 RUN_ID = os.environ.get("RUN_ID")
