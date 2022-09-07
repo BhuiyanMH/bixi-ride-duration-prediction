@@ -6,6 +6,7 @@ import haversine as hs
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_squared_error
+from sklearn.pipeline import make_pipeline
 from prefect import flow, task
 
 
@@ -49,7 +50,7 @@ def preprocess_data(ride_df: pd.DataFrame, station_df: pd.DataFrame)-> pd.DataFr
     return processed_df
 
 @task
-def generate_features(input_df: pd.DataFrame, target_column: str, vectorizer: DictVectorizer, fit_vectorizer = True):
+def generate_features(input_df: pd.DataFrame, target_column: str):
     
     feature_columns = input_df.columns.to_list()
     feature_columns.remove(target_column)
@@ -57,28 +58,22 @@ def generate_features(input_df: pd.DataFrame, target_column: str, vectorizer: Di
     feature_df = input_df[feature_columns]
     
     # convert the data frame as a dictionary 
-    feature_dicts = feature_df.to_dict(orient='records')
-    # vectorize the training data
+    feature_dict = feature_df.to_dict(orient='records')
 
-    if fit_vectorizer:
-        X = vectorizer.fit_transform(feature_dicts)
-    else:
-        X = vectorizer.transform(feature_dicts)
-    
-    y = input_df[target_column].values
-    
-    return (vectorizer, X, y)
+    return feature_dict
+
 
 @task
 def build_model(X, y, alpha):
-    
+    # make skalearn pipeline
+    pipeline = make_pipeline(
+        DictVectorizer(),
+        Lasso(alpha)
+    )
     # initialize model
-    lasso_regressor = Lasso(alpha)
-    
-    # perform training
-    lasso_regressor.fit(X, y)
-    
-    return lasso_regressor
+    pipeline.fit(X, y)
+    # return the pipeline
+    return pipeline
 
 @flow
 def train_and_register_model(train_ride_path: str, 
@@ -122,14 +117,11 @@ def train_and_register_model(train_ride_path: str,
     
     # generate features
     print("Generating features")
-    vectorizer = DictVectorizer()
-    dict_vectorizer, X_train, y_train = generate_features(input_df=train_preprocessed_df, 
-                                                          target_column="duration_minute", 
-                                                          vectorizer=vectorizer)
-    dict_vectorizer, X_val, y_val = generate_features(input_df=valid_preprocessed_df,
-                                                      target_column="duration_minute",
-                                                      vectorizer=dict_vectorizer,
-                                                      fit_vectorizer = False)
+    X_train = generate_features(input_df=train_preprocessed_df, target_column="duration_minute")
+    y_train = train_preprocessed_df["duration_minute"].values
+
+    X_val = generate_features(input_df=valid_preprocessed_df, target_column="duration_minute")
+    y_val = valid_preprocessed_df["duration_minute"].values
     
     # set the experiment name
     mlflow.set_experiment(exp_name)
@@ -158,10 +150,9 @@ def train_and_register_model(train_ride_path: str,
         mlflow.log_metric("rmse", rmse)
         print(f"RMSE on the validation data: {rmse}")
         
-        # log the model and the artifact
+        # log the model and the dictvectorize
         mlflow.sklearn.log_model(model, artifact_path="models")
         print("Logged the model in artifacts")
-        print(f"Artifacts URI: '{mlflow.get_artifact_uri()}'")
 
 def main_training_flow():
 
