@@ -1,17 +1,13 @@
 FROM python:3.9-slim
 
-RUN pip install -U pip
-RUN pip install pipenv 
-
 WORKDIR /app
 
-COPY [ "Pipfile", "Pipfile.lock", "./" ]
+COPY [ "requirements_prediction.txt",  "./" ]
 
-RUN pipenv install --system --deploy
+RUN pip3 install -r requirements_prediction.txt
 
+RUN pip3 install evidently
 
-COPY [ "prediction.py", "./" ]
+COPY [ "app.py", "./" ]
 
-EXPOSE 9696
-
-ENTRYPOINT [ "gunicorn", "--bind=0.0.0.0:9696", "prediction:bixi_app" ]
+CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=9696"]
