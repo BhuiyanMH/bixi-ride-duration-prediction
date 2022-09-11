@@ -34,7 +34,7 @@
       },
       "id": 14,
       "options": {
-        "content": "# Evidently Data Drift Monitoring\n\n  Here can be your information about dashboard and its usage.\n",
+        "content": "# Bixi Data Drift Monitoring\n\n  Explore the data drift in the Bixi ride duration prediction model \n",
         "mode": "markdown"
       },
       "pluginVersion": "8.3.6",
@@ -558,7 +558,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Evidently Data Drift Dashboard",
+  "title": "Bixi Data Drift Dashboard",
   "uid": "U54hsxv7k",
   "version": 2,
   "weekStart": ""
