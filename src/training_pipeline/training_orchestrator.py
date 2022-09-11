@@ -1,3 +1,4 @@
+from time import timezone
 import mlflow
 import os
 import pandas as pd
@@ -8,6 +9,9 @@ from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_squared_error
 from sklearn.pipeline import make_pipeline
 from prefect import flow, task
+from prefect.deployments import Deployment
+from prefect.orion.schemas.schedules import CronSchedule
+from datetime import timedelta
 
 
 @task
@@ -154,23 +158,32 @@ def train_and_register_model(train_ride_path: str,
         mlflow.sklearn.log_model(model, artifact_path="models")
         print("Logged the model in artifacts")
 
+@flow
 def main_training_flow():
 
     # setup mlflow
     TRACKING_SERVER_HOST = os.environ.get("TRACKING_SERVER_HOST")
-    AWS_PROFILE = os.environ.get("AWS_PROFILE")
-    if AWS_PROFILE is None or TRACKING_SERVER_HOST is None:
+    if TRACKING_SERVER_HOST is None:
         raise ValueError("AWS configuration is not set in the environment variables")  
     mlflow.set_tracking_uri(f"http://{TRACKING_SERVER_HOST}:5000")
 
     # Perform the training
-    train_ride_path = "data/2022-05-01/20220105_donnees_ouvertes.csv"
-    train_station_path = "data/2022-05-01/20220105_stations.csv"
-    valid_ride_path = "data/2022-06-01/20220106_donnees_ouvertes.csv"
-    valid_station_path = "data/2022-06-01/20220106_stations.csv"
+    train_ride_path = "../../data/2022-05-01/20220105_donnees_ouvertes.csv"
+    train_station_path = "../../data/2022-05-01/20220105_stations.csv"
+    valid_ride_path = "../../data/2022-06-01/20220106_donnees_ouvertes.csv"
+    valid_station_path = "../../data/2022-06-01/20220106_stations.csv"
     
     train_and_register_model(train_ride_path, train_station_path, valid_ride_path, valid_station_path)
 
-main_training_flow()
+# main_training_flow()
+
+deployment = Deployment.build_from_flow(
+    flow=main_training_flow,
+    name="Bixi Model Training",
+    schedule=CronSchedule(cron="0 0 5 * *", timezone="UTC"),
+    work_queue_name="Bixi-Training-Queue"
+)
+
+deployment.apply()
 
     

@@ -133,6 +133,6 @@ src/qtest.py
 data/*
 notebooks/scenario-3.ipynb
 notebooks/.ipynb_checkpoints
-scripts/env_vars.sh
+scripts/*
 src/prediction_service/pred_env_var.sh
 src/.env
