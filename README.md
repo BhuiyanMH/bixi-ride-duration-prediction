@@ -36,7 +36,7 @@ To summrize, the proposed solution is composed of the following components.
 
 **Containerization:** Docker
 
-**Model prediction Logs:** MongoDB
+**Model Prediction Logs:** MongoDB
 
 
 
@@ -45,9 +45,61 @@ Overall architecture of the project is shown below.
 ![Architecture of the Project](Images/project-architecture.png)
 # Running the Project
 
-## Environment Variables
-For running the project, you need to setup the following environment variables.
+## AWS Resources
+The project is built using AWS Cloud. To run the project, you need to have an AWS account and following resources there. 
+- AWS RDS (PostgreSQL)
+- AWS EC2
+- AWS S3
 
-- ** **
-- ** **
+You can choose the component versions which are free tier eligible. Still you might have a small cost.
 
+## Configuring AWS and MLFlow
+For the basic setup of the AWS and MLflow, you can follow this elaborative tutorial on [MLOps Zoomcamp repo](https://github.com/DataTalksClub/mlops-zoomcamp/blob/main/02-experiment-tracking/mlflow_on_aws.md). After the configuration, start the MLFlow server using the same command given in the last section of the tutorial.
+
+## Configuring Prefect
+### Prefect 2 Deployment in AWS
+For the configuration of the **Prefect 2** (Prefect 2.2.0 is used in this project), you can follow the ***Remote Prefect Orion Deployment*** section and ***Defining Storage for Prefect*** section of this [tutorial](https://gist.github.com/Qfl3x/8dd69b8173f027b9468016c118f3b6a5#remote-prefect-orion-deployment). Start the server on the EC2 using the same command as showed in the tutorial.
+
+### Dev Environment Setup for Prefect 2
+In your machine from which you will be running the Training Pipeline, you need to configure the Prefect API. You can do this by running the following commands.
+
+```shell
+prefect config view # to see the current config 
+prefect config unset PREFECT_ORION_UI_API_URL # unset if it is already set
+prefect config set PREFECT_API_URL="http://<EC2 Public IPv4 DNS>:4200/api" # to set the config
+```
+
+### Environment Variables
+For running the project, you need to set the following environment variables.
+
+- **AWS_ACCESS_KEY_ID** - Access key of your AWS user
+- **AWS_SECRET_ACCESS_KEY** - Secret access key of your AWS user
+- **TRACKING_SERVER_HOST** - Your EC2 Public IPv4 DNS
+- **AWS_S3_DIRECTORY** - For storing the prefect flows, in this format: <S3 BUCKET/FOLDER>
+- **RUN_ID** - Run Id of the ML flow experiment, run the Training Pipeline for creating some runs
+- **EXPERIMENT_ID** - Id of the MLFlow experiment
+- **S3_BUCKET_NAME** - Name of the S3 bucket where the artifacts are stored
+
+## Runtime Environment Setup
+To setup the runtime environment, you could install the requirements given in the `requirements_global.txt` file using Pip. To isolate the dependencies of this project from other prjects, it is preferable to create a separate virtual environment. You may use Anaconda or Pipenv for this purpose. 
+
+
+## Building the Containers
+To build the containers, you need to have Docker installed. For the installation of Docker, you can follow this [tutorial](https://www.youtube.com/watch?v=IXSiYkP23zo&list=PL3MmuxUbc_hIUISrluw_A7wDSmfOhErJK&index=3&t=400s). To build the containers, move to the  `src` directory and run the following command.
+
+```shell
+docker compose up --build
+```
+This will build and start the containers. Grafana dashboard will be available at the port `3000` and Prometheus will be availavble at `9091`.  To stop the containers press `CTRL+C`. To remove the containers you can run the following command. 
+
+```shell
+docker kill $(docker ps -q)
+```
+
+**NOTE**: To build the container, the environment variables has to be set as discussed in the previous section. There are two python files in  the src directory. 
+- *prepare_monitoring.py* - Run this file to create the reference data (bixi_monitoring_06_22.csv) for the monitoring service. This data need to be generated (if not exists) before building docker containers
+
+- **send_data_monitoring.py** - Run this file to send some request to the prediction service and hence populate the dashboard
+
+## Running the Training Pipeline
+For running the training pipeline, activate the runtime environment. The environment variables (TRACKING_SERVER_HOST, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET_NAME) need to be set as discussed in the previous section. You can run the `training_orchestrator.py` file from `training_pipeline` folder. This will create deploy the flow that will run at the 5th of every month. To run the flow immediately, you need to uncomment `main_training_flow()` line. Run the `setup_prefect_storage.py` before to setup the storage.
